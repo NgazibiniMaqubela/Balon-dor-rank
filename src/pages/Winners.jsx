@@ -1,0 +1,3 @@
+import {Trophy} from 'lucide-react';
+import {HISTORICAL} from '../data/data';
+export default function Winners(){return <><div className="pageHead"><div className="eyebrow">THE WINNERS</div><h1>Champions.</h1><p>The player who finished first in each edition of the Balon Dor Rank.</p></div><div className="winnerGrid">{[2026,2025,2024].map(y=>{const w=HISTORICAL[y]?.[0];return <div className={'winnerCard '+(y===2026?'current':'')} key={y}><span>EDITION {y}</span><div className="trophy"><Trophy size={48}/></div><h2>{y===2026?'TBA':w[0]}</h2><b>{y===2026?'Voting in progress':`${w[1]} points`}</b></div>})}</div></>}

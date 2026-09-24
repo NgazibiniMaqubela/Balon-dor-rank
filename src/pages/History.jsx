@@ -1,0 +1,2 @@
+import React from 'react';import {HISTORICAL} from '../data/data';import YearSelector from '../components/YearSelector';import RankingList from '../components/RankingList';
+export default function History(){const[year,setYear]=React.useState(2025);const rows=HISTORICAL[year].map(([name,points])=>({name,points}));return <><div className="pageHead"><div className="eyebrow">ARCHIVE</div><h1>History.</h1><p>Explore previous community ballots and compare how the ranking evolved.</p></div><YearSelector year={year} setYear={setYear}/><RankingList rows={rows}/></>}

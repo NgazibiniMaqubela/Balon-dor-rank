@@ -1,0 +1,1 @@
+export default function RankingList({rows}){return <div className="rankingTable">{rows.map((r,i)=><div className="rankRow" key={r.playerId||r.name}><span className="rank">{i+1}</span><div><b>{r.name}</b>{r.meta&&<small className="rowMeta">{r.meta}</small>}</div><strong>{r.points} <small>pts</small></strong></div>)}</div>}

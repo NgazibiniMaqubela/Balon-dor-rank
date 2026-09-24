@@ -1,0 +1,1 @@
+export default function YearSelector({year,setYear,years=[2024,2025,2026]}){return <div className="tabs">{years.map(y=><button key={y} className={year===y?'selected':''} onClick={()=>setYear(y)}>{y}</button>)}</div>}

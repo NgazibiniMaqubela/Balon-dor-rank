@@ -1,0 +1,13 @@
+import React from 'react';
+import {ArrowDown,ArrowUp,CheckCircle2,RotateCcw,ShieldCheck} from 'lucide-react';
+import {NOMINEES_2026,POINTS_2026} from '../data/data';
+import {submitVote} from '../firebase/votes';
+
+export default function Voting(){
+ const [order,setOrder]=React.useState(NOMINEES_2026); const [code,setCode]=React.useState(''); const [status,setStatus]=React.useState(''); const [submitted,setSubmitted]=React.useState(false);
+ const move=(i,d)=>{const j=i+d;if(j<0||j>=order.length)return;const x=[...order];[x[i],x[j]]=[x[j],x[i]];setOrder(x)};
+ const reset=()=>setOrder(NOMINEES_2026);
+ const vote=order.map((p,i)=>({playerId:p.id,rank:i+1,points:POINTS_2026[i]}));
+ const submit=async()=>{if(!code.trim())return setStatus('Enter your voter code first.');setStatus('Submitting…');try{const r=await submitVote({voterCode:code,rankings:vote});setSubmitted(true);setStatus(r.mode==='demo'?'Demo vote saved on this device. Firebase is not connected yet.':'Vote submitted successfully. Your ballot is locked.');}catch(e){setStatus(e.message||'Unable to submit vote.')}};
+ if(submitted)return <div className="center"><CheckCircle2 size={62}/><div className="eyebrow">BALLOT RECEIVED</div><h1 className="success">Your vote is in.</h1><p className="muted">Thanks for taking part in Balon Dor Rank 2026. Your ballot has been locked.</p><p className="message">{status}</p></div>;
+ return <><div className="pageHead"><div className="eyebrow">2026 BALLOT</div><h1>Rank all 30.</h1><p>Move players up or down until your order is exactly how you want it. #1 gets 30 points; #30 gets 1 point.</p></div><div className="voteLayout"><section className="panel"><div className="list">{order.map((p,i)=><div className={'voteRow '+(i<3?'top':'')} key={p.id}><span className="rank">{i+1}</span><span className="player">{p.name}</span><span className="pts">{POINTS_2026[i]} pts</span><button aria-label="Move up" onClick={()=>move(i,-1)} disabled={i===0}><ArrowUp size={15}/></button><button aria-label="Move down" onClick={()=>move(i,1)} disabled={i===29}><ArrowDown size={15}/></button></div>)}</div></section><aside className="panel submitBox"><ShieldCheck size={20}/><h3>Submit ballot</h3><label htmlFor="code">Voter code</label><input id="code" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="e.g. BALON26-A7F2"/><small className="muted">One code can submit one ballot.</small><button className="primary full" onClick={submit}>Submit my vote</button><button className="secondary full" onClick={reset}><RotateCcw size={15}/> Reset order</button>{status&&<p className="message">{status}</p>}</aside></div></>}
