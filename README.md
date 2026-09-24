@@ -50,3 +50,4 @@ Open the shown LAN URL on your phone while the phone and computer are on the sam
 Create one Firestore document in `voterCodes` with ID `BALON26-DEMO` and fields:
 `year: 2026`, `status: "available"`.
 Enable Firebase Authentication > Sign-in method > Anonymous. Then open the app and submit a full 30-player ballot with `BALON26-DEMO`. The vote document will be private; it cannot be read by the public client.
+# Balon-dor-rank
