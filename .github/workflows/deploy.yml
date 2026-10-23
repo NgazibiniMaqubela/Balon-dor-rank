@@ -25,9 +25,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-            - name: Clean old dependencies
+      - name: Clean old dependencies
         run: rm -rf node_modules
-
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Create Firebase environment
