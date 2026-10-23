@@ -11,7 +11,7 @@ export async function submitVote({year=2026,voterCode,rankings}) {
   const voteRef = doc(db,'votes',`${year}_${normalizedCode}`);
   await runTransaction(db, async tx => {
     const codeSnap = await tx.get(codeRef);
-    if (!codeSnap.exists()) throw new Error('Invalid voter code.');
+    if (!codeSnap.exists()) throw new Error('Invalid voter code. Check that the voterCodes document ID exactly matches the code you entered.');
     const code = codeSnap.data();
     if (code.year !== year || code.status !== 'available') throw new Error('This voter code is invalid or has already been used.');
     tx.set(voteRef,{year,voterCode:normalizedCode,rankings,submittedAt:serverTimestamp(),uid:auth.currentUser.uid});
