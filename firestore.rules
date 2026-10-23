@@ -1,30 +1,66 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        ).data.role == 'admin';
+    }
+
+    match /admins/{uid} {
+      // An authenticated user can check their own admin record.
+      allow get: if signedIn() && request.auth.uid == uid;
+
+      // No client can list, create, edit or delete admin records.
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
 
     match /voterCodes/{code} {
+      // Voters need to check a specific code when submitting.
       allow get: if signedIn();
-      allow list: if false;
+
+      // Only an administrator can list issued codes.
+      allow list: if isAdmin();
+
       allow create, delete: if false;
+
       allow update: if signedIn()
         && resource.data.status == 'available'
         && request.resource.data.status == 'used'
         && request.resource.data.year == resource.data.year
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','usedAt']);
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['status', 'usedAt']);
     }
 
     match /votes/{voteId} {
+      // Preserve the existing ballot submission permission.
       allow create: if signedIn()
         && request.resource.data.year == 2026
         && request.resource.data.voterCode is string
         && request.resource.data.rankings is list
         && request.resource.data.rankings.size() == 30
         && request.resource.data.uid == request.auth.uid;
-      allow get, list, update, delete: if false;
+
+      // Only administrators can read ballots or query vote counts.
+      allow get, list: if isAdmin();
+
+      allow update, delete: if false;
     }
 
     match /results/{doc} {
+      // Public users can read only published results.
       allow get: if resource.data.published == true;
       allow list: if false;
       allow write: if false;
