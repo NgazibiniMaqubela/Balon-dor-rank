@@ -1,5 +1,5 @@
 export const NOMINEES_2026 = [
-'Jude Bellingham','Pau Cubarsi','Marc Cucurella','Ousmane Dembele','Luis Díaz','Bruno Fernandes','Gabriel Magalhães','Erling Haaland','Achraf Hakimi','Harry Kane','Khvicha Kvaratskhelia','Lamine Yamal','Sadio Mane','Marquinhos','Lautaro Martinez','Kylian Mbappe','Nuno Mendes','Lionel Messi','Joao Neves','Michael Olise','Willian Pacho','Julian Quinones','Declan Rice','Rodri','Fabian Ruiz','William Saliba','Ferran Torres','Dayot Upamecano','Vinicius Jr','Vitinha'
+'Jude Bellingham','Pau Cubarsi','Marc Cucurella','Ousmane Dembele','Luis Fernando Díaz Marulanda','Bruno Fernandes','Gabriel Magalhães','Erling Haaland','Achraf Hakimi','Harry Kane','Khvicha Kvaratskhelia','Lamine Yamal','Sadio Mane','Marquinhos','Lautaro Martinez','Kylian Mbappe','Nuno Alexandre Tavares Mendes','Lionel Messi','Joao Neves','Michael Olise','Willian Pacho','Julian Quinones','Declan Rice','Rodri','Fabian Ruiz','William Saliba','Ferran Torres','Dayot Upamecano','Vinicius Jr','Vitinha'
 ].map((name,i)=>({id:`p${String(i+1).padStart(2,'0')}`,name}));
 
 export const HISTORICAL = {
