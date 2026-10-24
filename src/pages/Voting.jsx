@@ -2,8 +2,10 @@ import React from 'react';
 import { CheckCircle2, RotateCcw, ShieldCheck, AlertTriangle, UserRound, ArrowRightLeft } from 'lucide-react';
 import { NOMINEES_2026 } from '../data/data';
 import { submitVote } from '../firebase/votes';
+import { db } from '../firebase/config';
 import {
-  getDoc,       // <--- Add this line here!
+  doc,
+  getDoc,
 } from 'firebase/firestore';
 
 function PlayerPortrait({ name }) {
@@ -93,12 +95,17 @@ export default function Voting() {
   };
 
   const submit = async () => {
-    // Add this check at the beginning of your submitVote function:
-const settingsSnap = await getDoc(doc(db, 'settings', 'voting'));
-if (settingsSnap.exists() && settingsSnap.data().isOpen === false) {
-  setError('Voting is now closed by the administrator.');
-  return;
-}
+    // Check if voting is closed before submitting
+    try {
+      const settingsSnap = await getDoc(doc(db, 'settings', 'voting'));
+      if (settingsSnap.exists() && settingsSnap.data().isOpen === false) {
+        setStatus('Voting is now closed by the administrator.');
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking voting status:', err);
+    }
+
     if (!code.trim()) return setStatus('Enter your voter code first.');
     if (rankedCount !== NOMINEES_2026.length) return setStatus(`Rank all 30 players before submitting. You have ranked ${rankedCount} of 30.`);
     const ranks = Object.values(rankByPlayer);
