@@ -10,11 +10,19 @@ const YEAR = 2026;
 function getPlayerDetails(item) {
   if (!item) return { name: 'Unknown player', club: '', image: '' };
   
-  // If the item is a string (just the name), return it
+  // If it's already a plain string name
   if (typeof item === 'string') return { name: item, club: '', image: '' };
 
+  // Check every possible property where the name or ID might live
+  const rawName = item.name || item.playerName || item.nominee || item.title || item.playerId || item.id || '';
+
+  let cleanName = String(rawName);
+  if (cleanName.startsWith('p') && cleanName.length <= 4) {
+    cleanName = `Player ${cleanName.substring(1)}`;
+  }
+
   return {
-    name: item.name || item.playerName || item.nominee || item.playerId || 'Unknown player',
+    name: cleanName !== '' ? cleanName : 'Unknown player',
     club: item.club || '',
     image: item.image || '',
     points: item.points || 0
