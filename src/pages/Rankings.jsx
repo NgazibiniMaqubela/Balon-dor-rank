@@ -1,7 +1,7 @@
 import React from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { HISTORICAL, NOMINEES } from '../data/data';
+import { HISTORICAL } from '../data/data';
 import RankingList from '../components/RankingList';
 import YearSelector from '../components/YearSelector';
 
@@ -9,16 +9,14 @@ const YEAR = 2026;
 
 function getPlayerDetails(item) {
   if (!item) return { name: 'Unknown player', club: '', image: '' };
-
-  let id = typeof item === 'string' ? item : (item.playerId || item.id || '');
-  let fallbackName = item.name || item.playerName || item.nominee || '';
-
-  const found = NOMINEES?.find(n => n.id === id || n.name === fallbackName || n.id === item.playerId);
+  
+  // If the item is a string (just the name), return it
+  if (typeof item === 'string') return { name: item, club: '', image: '' };
 
   return {
-    name: found?.name || fallbackName || (typeof item === 'object' ? JSON.stringify(item) : String(item)),
-    club: found?.club || item.club || '',
-    image: found?.image || item.image || '',
+    name: item.name || item.playerName || item.nominee || item.playerId || 'Unknown player',
+    club: item.club || '',
+    image: item.image || '',
     points: item.points || 0
   };
 }
