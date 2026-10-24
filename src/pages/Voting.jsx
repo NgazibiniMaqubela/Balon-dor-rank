@@ -90,6 +90,12 @@ export default function Voting() {
   };
 
   const submit = async () => {
+    // Add this check at the beginning of your submitVote function:
+const settingsSnap = await getDoc(doc(db, 'settings', 'voting'));
+if (settingsSnap.exists() && settingsSnap.data().isOpen === false) {
+  setError('Voting is now closed by the administrator.');
+  return;
+}
     if (!code.trim()) return setStatus('Enter your voter code first.');
     if (rankedCount !== NOMINEES_2026.length) return setStatus(`Rank all 30 players before submitting. You have ranked ${rankedCount} of 30.`);
     const ranks = Object.values(rankByPlayer);
