@@ -1,7 +1,7 @@
 import React from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { HISTORICAL } from '../data/data';
+import { HISTORICAL, NOMINEES_2026 } from '../data/data';
 import RankingList from '../components/RankingList';
 import YearSelector from '../components/YearSelector';
 
@@ -16,15 +16,18 @@ function getPlayerDetails(item) {
   // Check every possible property where the name or ID might live
   const rawName = item.name || item.playerName || item.nominee || item.title || item.playerId || item.id || '';
 
-  let cleanName = String(rawName);
-  if (cleanName.startsWith('p') && cleanName.length <= 4) {
+  // If we have a playerId, check NOMINEES_2026 first to grab the actual name
+  const matchedPlayer = NOMINEES_2026?.find(p => p.id === item.playerId || p.name.toLowerCase() === String(rawName).toLowerCase());
+
+  let cleanName = matchedPlayer?.name || String(rawName);
+  if (cleanName.startsWith('p') && cleanName.length <= 4 && !matchedPlayer) {
     cleanName = `Player ${cleanName.substring(1)}`;
   }
 
   return {
     name: cleanName !== '' ? cleanName : 'Unknown player',
-    club: item.club || '',
-    image: item.image || '',
+    club: item.club || matchedPlayer?.club || '',
+    image: item.image || matchedPlayer?.image || '',
     points: item.points || 0
   };
 }
@@ -62,7 +65,15 @@ export default function Rankings() {
 
   let rows = [];
   if (year !== 2026) {
-    rows = (HISTORICAL[year] || []).map(([name, points]) => ({ name, points }));
+    rows = (HISTORICAL[year] || []).map(([name, points]) => {
+      const matched = NOMINEES_2026?.find(p => p.name.toLowerCase() === name.toLowerCase());
+      return { 
+        name, 
+        points, 
+        club: matched?.club || '', 
+        image: matched?.image || '' 
+      };
+    });
   } else {
     rows = (published?.rankings || []).map((r) => {
       const details = getPlayerDetails(r);
@@ -105,26 +116,31 @@ export default function Rankings() {
         <>
           {rows.length > 0 && (
             <div className="podium" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-              {rows.slice(0, 3).map((r, i) => (
-                <div
-                  className={'pod ' + (i === 0 ? 'winner' : '')}
-                  key={r.name}
-                  style={{ textAlign: 'center', padding: '1rem', background: '#fff', borderRadius: '8px', minWidth: '180px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
-                >
-                  <span>#{i + 1}</span>
-                  {r.image ? (
-                    <img
-                      src={r.image}
-                      alt={r.name}
-                      style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', margin: '0.5rem auto', display: 'block', border: '2px solid #c9a227' }}
-                    />
-                  ) : null}
-                  <h2>{r.name}</h2>
-                  <p className="muted" style={{ fontSize: '0.85rem', margin: '0.2rem 0' }}>{r.club || ''}</p>
-                  <b>{r.points}</b>
-                  <small>points</small>
-                </div>
-              ))}
+              {rows.slice(0, 3).map((r, i) => {
+                const matchedPlayer = NOMINEES_2026?.find(p => p.name.toLowerCase() === r.name.toLowerCase());
+                const playerImage = r.image || matchedPlayer?.image;
+
+                return (
+                  <div
+                    className={'pod ' + (i === 0 ? 'winner' : '')}
+                    key={r.name}
+                    style={{ textAlign: 'center', padding: '1rem', background: '#fff', borderRadius: '8px', minWidth: '180px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
+                  >
+                    <span>#{i + 1}</span>
+                    {playerImage ? (
+                      <img
+                        src={playerImage}
+                        alt={r.name}
+                        style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', margin: '0.5rem auto', display: 'block', border: '2px solid #c9a227' }}
+                      />
+                    ) : null}
+                    <h2>{r.name}</h2>
+                    <p className="muted" style={{ fontSize: '0.85rem', margin: '0.2rem 0' }}>{r.club || matchedPlayer?.club || ''}</p>
+                    <b>{r.points}</b>
+                    <small>points</small>
+                  </div>
+                );
+              })}
             </div>
           )}
 
