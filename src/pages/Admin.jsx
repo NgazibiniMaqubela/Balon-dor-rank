@@ -301,14 +301,14 @@ export default function Admin() {
       {message && <p className="message">{message}</p>}
 
       {/* Control Actions Section */}
-      <section className="panel" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+      <section className="panel">
         <h2>Voting Controls</h2>
         <p className="muted">Control whether voters can submit new ballots and publish final results.</p>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+        
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem', alignItems: 'center' }}>
           <button
             className={votingClosed ? 'primary' : 'secondary'}
             onClick={toggleVotingStatus}
-            style={{ background: votingClosed ? '#10b981' : '#ef4444', color: '#fff' }}
           >
             {votingClosed ? 'Open Voting' : 'Close Voting'}
           </button>
@@ -317,12 +317,13 @@ export default function Admin() {
             className="primary"
             onClick={publishRankings}
             disabled={!votingClosed || publishing}
-            style={{ opacity: !votingClosed ? 0.5 : 1 }}
+            style={{ opacity: !votingClosed ? 0.6 : 1 }}
           >
             {publishing ? 'Publishing…' : 'Reveal 2026 Final Rankings'}
           </button>
         </div>
-        <p className="muted" style={{ marginTop: '0.5rem' }}>
+
+        <p className="muted" style={{ marginTop: '1rem' }}>
           Status: <strong>{votingClosed ? 'Closed (Submissions blocked)' : 'Open (Accepting votes)'}</strong>
         </p>
       </section>
