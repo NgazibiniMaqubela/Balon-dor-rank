@@ -1,11 +1,27 @@
 import React from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { HISTORICAL } from '../data/data';
+import { HISTORICAL, NOMINEES } from '../data/data';
 import RankingList from '../components/RankingList';
 import YearSelector from '../components/YearSelector';
 
 const YEAR = 2026;
+
+function getPlayerDetails(item) {
+  if (!item) return { name: 'Unknown player', club: '', image: '' };
+
+  let id = typeof item === 'string' ? item : (item.playerId || item.id || '');
+  let fallbackName = item.name || item.playerName || item.nominee || '';
+
+  const found = NOMINEES?.find(n => n.id === id || n.name === fallbackName || n.id === item.playerId);
+
+  return {
+    name: found?.name || fallbackName || (typeof item === 'object' ? JSON.stringify(item) : String(item)),
+    club: found?.club || item.club || '',
+    image: found?.image || item.image || '',
+    points: item.points || 0
+  };
+}
 
 export default function Rankings() {
   const [year, setYear] = React.useState(2026);
@@ -42,13 +58,16 @@ export default function Rankings() {
   if (year !== 2026) {
     rows = (HISTORICAL[year] || []).map(([name, points]) => ({ name, points }));
   } else {
-    rows = (published?.rankings || []).map((r) => ({
-      name: r.name,
-      club: r.club,
-      image: r.image,
-      points: r.points,
-      rank: r.rank,
-    }));
+    rows = (published?.rankings || []).map((r) => {
+      const details = getPlayerDetails(r);
+      return {
+        name: details.name,
+        club: details.club,
+        image: details.image,
+        points: r.points,
+        rank: r.rank,
+      };
+    });
   }
 
   const hasResults = year !== 2026 || rows.length > 0;
