@@ -2,6 +2,9 @@ import React from 'react';
 import { CheckCircle2, RotateCcw, ShieldCheck, AlertTriangle, UserRound, ArrowRightLeft } from 'lucide-react';
 import { NOMINEES_2026 } from '../data/data';
 import { submitVote } from '../firebase/votes';
+import {
+  getDoc,       // <--- Add this line here!
+} from 'firebase/firestore';
 
 function PlayerPortrait({ name }) {
   const [src, setSrc] = React.useState('');
