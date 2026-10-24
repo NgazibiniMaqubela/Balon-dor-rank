@@ -32,7 +32,7 @@ function getPlayerDetails(item) {
   };
 }
 
-// Dynamic Wikipedia portrait fetcher for podium cards
+// Dynamic Wikipedia portrait component styled to fill the card backdrop
 function PodiumPortrait({ name }) {
   const [src, setSrc] = React.useState('');
   const [failed, setFailed] = React.useState(false);
@@ -53,14 +53,20 @@ function PodiumPortrait({ name }) {
     return () => { active = false; };
   }, [name]);
 
+  if (!src || failed) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: '1.2rem', color: '#777', fontWeight: 'bold' }}>{name}</span>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0.5rem auto', border: '2px solid #c9a227', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {src && !failed ? (
-        <img src={src} alt={`${name} portrait`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <span style={{ fontSize: '0.70rem', color: '#666', textAlign: 'center', padding: '0 4px' }}>{name.split(' ').pop()}</span>
-      )}
-    </div>
+    <img 
+      src={src} 
+      alt={`${name} portrait`} 
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.7)' }} 
+    />
   );
 }
 
@@ -147,31 +153,60 @@ export default function Rankings() {
       ) : (
         <>
           {rows.length > 0 && (
-            <div className="podium" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+            <div className="podium" style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
               {rows.slice(0, 3).map((r, i) => {
                 const matchedPlayer = NOMINEES_2026?.find(p => p.name.toLowerCase() === r.name.toLowerCase() || p.id === r.playerId);
+                const activeImage = r.image || matchedPlayer?.image;
 
                 return (
                   <div
                     className={'pod ' + (i === 0 ? 'winner' : '')}
                     key={r.name}
-                    style={{ textAlign: 'center', padding: '1rem', background: '#fff', borderRadius: '8px', minWidth: '180px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
+                    style={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      borderRadius: '12px',
+                      minWidth: '220px',
+                      minHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      padding: '1.25rem',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+                      border: i === 0 ? '2px solid #c9a227' : '1px solid rgba(255,255,255,0.1)',
+                      background: '#121212'
+                    }}
                   >
-                    <span>#{i + 1}</span>
-                    
-                    {/* Dynamic image rendering using stored image or Wikipedia fallback */}
-                    {r.image ? (
-                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0.5rem auto', border: '2px solid #c9a227', background: '#f0f0f0' }}>
-                        <img src={r.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
+                    {/* Background Image filling the card */}
+                    {activeImage ? (
+                      <img 
+                        src={activeImage} 
+                        alt={r.name} 
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)' }} 
+                      />
                     ) : (
                       <PodiumPortrait name={r.name} />
                     )}
 
-                    <h2>{r.name}</h2>
-                    <p className="muted" style={{ fontSize: '0.85rem', margin: '0.2rem 0' }}>{r.club || matchedPlayer?.club || ''}</p>
-                    <b>{r.points}</b>
-                    <small>points</small>
+                    {/* Dark gradient overlay to ensure text readability */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%)', zIndex: 1 }} />
+
+                    {/* Top Badge */}
+                    <div style={{ zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ background: i === 0 ? '#c9a227' : 'rgba(255,255,255,0.2)', color: i === 0 ? '#000' : '#fff', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        #{i + 1}
+                      </span>
+                    </div>
+
+                    {/* Bottom Content */}
+                    <div style={{ zIndex: 2, textAlign: 'left' }}>
+                      <h2 style={{ color: '#fff', fontSize: '1.3rem', margin: '0 0 0.2rem 0', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{r.name}</h2>
+                      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: '0 0 0.8rem 0' }}>{r.club || matchedPlayer?.club || ''}</p>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#fff' }}>{r.points}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>points</span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
