@@ -166,99 +166,94 @@ export default function Admin() {
   };
 
   
-const publishRankings = async () => {
-  if (!votingClosed) {
-    setError('You must close voting before revealing the final rankings.');
-    return;
-  }
+  const publishRankings = async () => {
+    if (!votingClosed) {
+      setError('You must close voting before revealing the final rankings.');
+      return;
+    }
 
-  if (!votes.length) {
-    setError('No ballots were found in Firestore. Nothing to reveal.');
-    return;
-  }
+    if (!votes.length) {
+      setError('No ballots were found in Firestore. Nothing to reveal.');
+      return;
+    }
 
-  setPublishing(true);
-  setError('');
-  setMessage('');
+    setPublishing(true);
+    setError('');
+    setMessage('');
 
-  try {
-    const scores = {};
+    try {
+      const scores = {};
 
-    // Each ballot awards 30 points for 1st place,
-    // 29 for 2nd, continuing down to 1 point for 30th.
-    votes.forEach((vote) => {
-      if (!Array.isArray(vote.rankings)) return;
+      votes.forEach((vote) => {
+        if (!Array.isArray(vote.rankings)) return;
 
-      vote.rankings.slice(0, 30).forEach((item, index) => {
-        const name = playerLabel(item);
+        vote.rankings.slice(0, 30).forEach((item, index) => {
+          const name = playerLabel(item).trim();
+          if (!name || name === 'Unknown player') return;
 
-        if (!name || name === 'Unknown player') return;
+          // Use the saved rank if present; otherwise use the item's position in the ballot.
+          const rawRank = Number(playerRank(item, index));
+          const rank = Number.isFinite(rawRank) && rawRank >= 1 && rawRank <= 30
+            ? rawRank
+            : index + 1;
+          const points = 31 - rank; // 1st = 30 points, 30th = 1 point.
+          const club = item && typeof item === 'object' ? item.club || '' : '';
+          const image = item && typeof item === 'object' ? item.image || '' : '';
 
-        const points = 30 - index;
-        const club =
-          item && typeof item === 'object' ? item.club || '' : '';
-        const image =
-          item && typeof item === 'object' ? item.image || '' : '';
+          if (!scores[name]) {
+            scores[name] = {
+              name,
+              points: 0,
+              votesCount: 0,
+              firstPlaceVotes: 0,
+              club,
+              image,
+            };
+          }
 
-        if (!scores[name]) {
-          scores[name] = {
-            name,
-            points: 0,
-            votesCount: 0,
-            firstPlaceVotes: 0,
-            club,
-            image,
-          };
-        }
-
-        scores[name].points += points;
-        scores[name].votesCount += 1;
-
-        // Count how often a player was ranked first.
-        const rank = playerRank(item, index);
-        if (rank === 1 || index === 0) {
-          scores[name].firstPlaceVotes += 1;
-        }
+          scores[name].points += points;
+          scores[name].votesCount += 1;
+          if (rank === 1) scores[name].firstPlaceVotes += 1;
+          if (!scores[name].club && club) scores[name].club = club;
+          if (!scores[name].image && image) scores[name].image = image;
+        });
       });
-    });
 
-    const sortedRankings = Object.values(scores).sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.firstPlaceVotes - a.firstPlaceVotes ||
-        b.votesCount - a.votesCount ||
-        a.name.localeCompare(b.name)
-    );
+      const sortedRankings = Object.values(scores).sort(
+        (a, b) =>
+          b.points - a.points ||
+          b.firstPlaceVotes - a.firstPlaceVotes ||
+          b.votesCount - a.votesCount ||
+          a.name.localeCompare(b.name)
+      );
 
-    const finalized = sortedRankings.map((player, index) => ({
-      rank: index + 1,
-      name: player.name,
-      club: player.club,
-      image: player.image,
-      points: player.points,
-      votesCount: player.votesCount,
-      firstPlaceVotes: player.firstPlaceVotes,
-    }));
+      const finalized = sortedRankings.map((player, index) => ({
+        rank: index + 1,
+        name: player.name,
+        club: player.club,
+        image: player.image,
+        points: player.points,
+        votesCount: player.votesCount,
+        firstPlaceVotes: player.firstPlaceVotes,
+      }));
 
-    // Use the same document path as getPublishedResults().
-    await setDoc(doc(db, 'results', String(YEAR)), {
-      year: YEAR,
-      published: true,
-      rankings: finalized,
-      totalBallots: votes.length,
-      publishedAt: new Date(),
-    });
+      // This is the same path read by getPublishedResults() in votes.js.
+      // Firestore creates the results collection and 2026 document on this write.
+      await setDoc(doc(db, 'results', String(YEAR)), {
+        year: YEAR,
+        published: true,
+        rankings: finalized,
+        totalBallots: votes.length,
+        publishedAt: new Date(),
+      });
 
-    setMessage(
-      `2026 rankings published successfully from ${votes.length} ballots.`
-    );
-  } catch (err) {
-    setError(`Failed to publish rankings: ${err.message}`);
-  } finally {
-    setPublishing(false);
-  }
-};
-
+      setMessage(`2026 rankings published successfully from ${votes.length} ballots.`);
+    } catch (err) {
+      setError(`Failed to publish rankings: ${err.message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const exportCodeRegister = () => {
     downloadCsv([
