@@ -165,57 +165,100 @@ export default function Admin() {
     }
   };
 
-  const publishRankings = async () => {
-    if (!votingClosed) {
-      setError('You must close voting before revealing the final rankings.');
-      return;
-    }
+  
+const publishRankings = async () => {
+  if (!votingClosed) {
+    setError('You must close voting before revealing the final rankings.');
+    return;
+  }
 
-    setPublishing(true);
-    setError('');
-    setMessage('');
+  if (!votes.length) {
+    setError('No ballots were found in Firestore. Nothing to reveal.');
+    return;
+  }
 
-    try {
-      // Tally votes: simple point system where 1st place gets N points, 2nd gets N-1, etc.
-      const scores = {};
+  setPublishing(true);
+  setError('');
+  setMessage('');
 
-      votes.forEach((vote) => {
-        if (Array.isArray(vote.rankings)) {
-          vote.rankings.forEach((item, index) => {
-            const name = playerLabel(item);
-            const points = Math.max(10 - index, 1); // standard point weight
-            if (!scores[name]) {
-              scores[name] = { name, points: 0, votesCount: 0, club: item.club || '', image: item.image || '' };
-            }
-            scores[name].points += points;
-            scores[name].votesCount += 1;
-          });
+  try {
+    const scores = {};
+
+    // Each ballot awards 30 points for 1st place,
+    // 29 for 2nd, continuing down to 1 point for 30th.
+    votes.forEach((vote) => {
+      if (!Array.isArray(vote.rankings)) return;
+
+      vote.rankings.slice(0, 30).forEach((item, index) => {
+        const name = playerLabel(item);
+
+        if (!name || name === 'Unknown player') return;
+
+        const points = 30 - index;
+        const club =
+          item && typeof item === 'object' ? item.club || '' : '';
+        const image =
+          item && typeof item === 'object' ? item.image || '' : '';
+
+        if (!scores[name]) {
+          scores[name] = {
+            name,
+            points: 0,
+            votesCount: 0,
+            firstPlaceVotes: 0,
+            club,
+            image,
+          };
+        }
+
+        scores[name].points += points;
+        scores[name].votesCount += 1;
+
+        // Count how often a player was ranked first.
+        const rank = playerRank(item, index);
+        if (rank === 1 || index === 0) {
+          scores[name].firstPlaceVotes += 1;
         }
       });
+    });
 
-      const sortedRankings = Object.values(scores).sort((a, b) => b.points - a.points);
-      const finalized = sortedRankings.map((player, index) => ({
-        rank: index + 1,
-        name: player.name,
-        club: player.club,
-        image: player.image,
-        points: player.points,
-      }));
+    const sortedRankings = Object.values(scores).sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.firstPlaceVotes - a.firstPlaceVotes ||
+        b.votesCount - a.votesCount ||
+        a.name.localeCompare(b.name)
+    );
 
-      // Save to Firestore under rankings/2026
-      await setDoc(doc(db, 'rankings', String(YEAR)), {
-        year: YEAR,
-        rankings: finalized,
-        updatedAt: new Date(),
-      });
+    const finalized = sortedRankings.map((player, index) => ({
+      rank: index + 1,
+      name: player.name,
+      club: player.club,
+      image: player.image,
+      points: player.points,
+      votesCount: player.votesCount,
+      firstPlaceVotes: player.firstPlaceVotes,
+    }));
 
-      setMessage('2026 Final Rankings published successfully! Check the Rankings, Winners, and History pages.');
-    } catch (err) {
-      setError(`Failed to publish rankings: ${err.message}`);
-    } finally {
-      setPublishing(false);
-    }
-  };
+    // Use the same document path as getPublishedResults().
+    await setDoc(doc(db, 'results', String(YEAR)), {
+      year: YEAR,
+      published: true,
+      rankings: finalized,
+      totalBallots: votes.length,
+      publishedAt: new Date(),
+    });
+
+    setMessage(
+      `2026 rankings published successfully from ${votes.length} ballots.`
+    );
+  } catch (err) {
+    setError(`Failed to publish rankings: ${err.message}`);
+  } finally {
+    setPublishing(false);
+  }
+};
+
 
   const exportCodeRegister = () => {
     downloadCsv([
