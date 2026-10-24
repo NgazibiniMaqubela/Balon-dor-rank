@@ -3,3 +3,40 @@
 
 /* Rank-by-card ballot */
 .ballotProgress{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;margin:0 0 18px;padding:16px 20px}.ballotProgress>div:first-child{display:flex;align-items:baseline;gap:8px}.ballotProgress strong{font-size:20px}.ballotProgress span,.progressPoints{font-size:12px;color:#a1a1aa}.progressTrack{height:8px;background:#27272a;border-radius:999px;overflow:hidden}.progressTrack span{display:block;height:100%;background:#d4d4d8;border-radius:999px;transition:width .2s ease}.votingWorkspace{display:grid;grid-template-columns:minmax(0,1fr) 270px;align-items:start;gap:16px;padding-bottom:60px}.playerCardGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.playerCard{min-width:0;padding:14px;border:1px solid #29292d;border-radius:14px;background:linear-gradient(145deg,#151517,#101012);transition:border-color .15s,background .15s}.playerCard.isRanked{border-color:#44444b}.playerCard.isPending{border-color:#f59e0b}.playerCardTop{display:flex;align-items:center;gap:11px;min-width:0}.playerPortrait{width:64px;height:72px;flex:0 0 64px;border-radius:10px;overflow:hidden;background:#27272a;display:flex;align-items:center;justify-content:center}.playerPortrait img{width:100%;height:100%;object-fit:cover;object-position:center top}.portraitFallback{color:#71717a;display:flex;align-items:center;justify-content:center}.playerCardName{min-width:0;flex:1}.playerCardName h3{font-size:14px;line-height:1.25;margin:0 0 6px;overflow-wrap:anywhere}.playerCardName span{font-size:11px;color:#a1a1aa}.rankBadge{display:grid;place-items:center;min-width:34px;height:34px;padding:0 6px;border-radius:9px;background:#f4f4f5;color:#09090b;font-weight:850;font-size:13px}.rankControl{display:grid;grid-template-columns:1fr auto;gap:7px 10px;align-items:center;margin-top:13px}.rankControl label{grid-column:1/-1;margin:0;font-size:11px}.rankControl select{min-width:0;width:100%;margin:0;padding:10px 8px;background:#09090b;color:#f4f4f5;border:1px solid #3f3f46;border-radius:8px;font:inherit;font-size:12px}.pointsValue{font-size:12px;color:#d4d4d8;white-space:nowrap}.ballotSubmitBox{position:sticky;top:90px}.submitIntro{font-size:12px;line-height:1.5}.submitSummary{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #29292d;font-size:12px;color:#a1a1aa}.submitSummary strong{color:#f4f4f5;font-size:13px}.duplicateWarning{display:flex;gap:12px;padding:16px;margin-bottom:16px;border:1px solid #854d0e;background:#21180b;border-radius:12px;color:#fef3c7}.duplicateWarning>svg{flex:0 0 auto;color:#fbbf24}.duplicateCopy{min-width:0}.duplicateCopy>strong{font-size:15px}.duplicateCopy p{font-size:13px;line-height:1.55;color:#fef3c7;margin:7px 0 12px}.duplicateCopy small{display:block;margin-top:10px;color:#d6b979;line-height:1.5}.duplicateActions{display:flex;flex-wrap:wrap;gap:8px}.duplicateActions button{padding:9px 11px;font-size:12px}.textButton{border:0;background:transparent;color:#fef3c7;padding:9px;cursor:pointer}.ballotSubmitBox .primary:disabled{cursor:not-allowed;opacity:.35}@media(max-width:900px){.votingWorkspace{grid-template-columns:1fr}.ballotSubmitBox{position:static;order:-1}.playerCardGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.ballotProgress{grid-template-columns:1fr auto;gap:8px 12px;padding:13px}.progressTrack{grid-column:1/-1;grid-row:2}.playerCardGrid{grid-template-columns:1fr}.playerCard{padding:12px}.playerPortrait{width:62px;height:68px;flex-basis:62px}.duplicateWarning{padding:12px}.duplicateActions{gap:6px}.duplicateActions button{flex:1}.duplicateActions .textButton{flex:0 0 auto}}
+
+.panel table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .panel th,
+  .panel td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: top;
+  }
+  
+  .panel th {
+    white-space: nowrap;
+  }
+  
+  .panel details summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  .panel input,
+  .panel select {
+    max-width: 100%;
+    padding: 0.65rem;
+    margin: 0.4rem 0 0.8rem;
+  }
+  
+  .panel textarea {
+    box-sizing: border-box;
+    margin: 0.5rem 0;
+  }
+  

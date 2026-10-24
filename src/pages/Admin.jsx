@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   GoogleAuthProvider,
@@ -9,7 +8,7 @@ import {
 import {
   collection,
   doc,
-  getCountFromServer,
+  getDocs,
   getDoc,
   query,
   where,
@@ -18,17 +17,78 @@ import { auth, db, firebaseConfigured } from '../firebase/config';
 
 const YEAR = 2026;
 
+function dateLabel(value) {
+  if (!value) return '—';
+
+  const date = typeof value.toDate === 'function'
+    ? value.toDate()
+    : new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleString();
+}
+
+function playerLabel(item) {
+  if (typeof item === 'string') return item;
+
+  if (item && typeof item === 'object') {
+    return (
+      item.playerName ??
+      item.player ??
+      item.name ??
+      item.nominee ??
+      item.title ??
+      item.id ??
+      JSON.stringify(item)
+    );
+  }
+
+  return String(item ?? 'Unknown player');
+}
+
+function playerRank(item, index) {
+  if (item && typeof item === 'object') {
+    return item.rank ?? item.position ?? item.ranking ?? index + 1;
+  }
+
+  return index + 1;
+}
+
+function downloadCsv(rows, filename) {
+  const csv = rows.map((row) =>
+    row.map((value) => {
+      const text = String(value ?? '');
+      return `"${text.replace(/"/g, '""')}"`;
+    }).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob(['\uFEFF' + csv], {
+    type: 'text/csv;charset=utf-8;',
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Admin() {
   const [user, setUser] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [checking, setChecking] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
-  const [stats, setStats] = React.useState(null);
   const [error, setError] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [codes, setCodes] = React.useState([]);
+  const [votes, setVotes] = React.useState([]);
+  const [codeFilter, setCodeFilter] = React.useState('all');
+  const [search, setSearch] = React.useState('');
 
   const checkAdmin = async (currentUser) => {
     setIsAdmin(false);
-    setStats(null);
 
     if (!currentUser || !db) {
       setChecking(false);
@@ -77,57 +137,83 @@ export default function Admin() {
     }
   };
 
-  const refreshCounts = async () => {
+  const refreshData = async () => {
     if (!isAdmin || !db) return;
 
     setLoading(true);
     setError('');
 
     try {
-      const votesQuery = query(
-        collection(db, 'votes'),
-        where('year', '==', YEAR)
-      );
-
-      const codesQuery = query(
-        collection(db, 'voterCodes'),
-        where('year', '==', YEAR)
-      );
-
-      const [votesResult, codesResult] = await Promise.all([
-        getCountFromServer(votesQuery),
-        getCountFromServer(codesQuery),
+      const [codeSnap, voteSnap] = await Promise.all([
+        getDocs(query(
+          collection(db, 'voterCodes'),
+          where('year', '==', YEAR)
+        )),
+        getDocs(query(
+          collection(db, 'votes'),
+          where('year', '==', YEAR)
+        )),
       ]);
 
-      const votes = votesResult.data().count;
-      const codes = codesResult.data().count;
+      const codeRows = codeSnap.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
 
-      setStats({
-        votes,
-        codes,
-        remaining: Math.max(codes - votes, 0),
-        percentage: codes
-          ? Math.min(Math.round((votes / codes) * 100), 100)
-          : 0,
-      });
+      const voteRows = voteSnap.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
+
+      codeRows.sort((a, b) =>
+        dateValue(b.createdAt) - dateValue(a.createdAt)
+      );
+
+      voteRows.sort((a, b) =>
+        dateValue(b.submittedAt) - dateValue(a.submittedAt)
+      );
+
+      setCodes(codeRows);
+      setVotes(voteRows);
     } catch (err) {
-      setError(`Unable to load vote statistics: ${err.message}`);
+      setError(`Unable to load admin data: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
-    if (isAdmin) refreshCounts();
+    if (isAdmin) refreshData();
   }, [isAdmin]);
 
+  const exportCodeRegister = () => {
+    downloadCsv([
+      ['Voter Code', 'Year', 'Status', 'Created At', 'Used At'],
+      ...codes.map((code) => [
+        code.id,
+        code.year,
+        code.status,
+        dateLabel(code.createdAt),
+        dateLabel(code.usedAt),
+      ]),
+    ], `Balon-Dor-${YEAR}-Voter-Code-Register.csv`);
+  };
+
+  const exportBallots = () => {
+    downloadCsv([
+      ['Vote ID', 'Voter Code', 'Submitted At', 'Ranking Count', 'Rankings'],
+      ...votes.map((vote) => [
+        vote.id,
+        vote.voterCode,
+        dateLabel(vote.submittedAt),
+        Array.isArray(vote.rankings) ? vote.rankings.length : 0,
+        JSON.stringify(vote.rankings ?? []),
+      ]),
+    ], `Balon-Dor-${YEAR}-Ballot-Register.csv`);
+  };
+
   if (!firebaseConfigured) {
-    return (
-      <div className="panel">
-        Firebase is not configured. Check your GitHub Actions
-        Firebase environment secrets and redeploy.
-      </div>
-    );
+    return <div className="panel">Firebase is not configured.</div>;
   }
 
   if (checking) {
@@ -153,22 +239,15 @@ export default function Admin() {
       <section className="pageHead">
         <div className="eyebrow">ACCESS NOT AUTHORISED</div>
         <h1>Administrator access required.</h1>
-        <p>
-          Signed in as {user.email || 'Google user'}.
-          This account is not yet authorised.
-        </p>
+        <p>Signed in as {user.email || 'Google user'}.</p>
         <div className="panel">
           <p>Administrator UID</p>
           <code>{user.uid}</code>
           <p className="muted">
-            Copy this UID and create the administrator document
-            in Firestore as described in the setup instructions.
-            Then recheck access.
+            Add this UID as an admins document in Firestore if
+            this account should be an administrator.
           </p>
-          <button
-            className="secondary"
-            onClick={() => checkAdmin(user)}
-          >
+          <button className="secondary" onClick={() => checkAdmin(user)}>
             Recheck access
           </button>
         </div>
@@ -180,87 +259,226 @@ export default function Admin() {
     );
   }
 
+  const usedCodes = codes.filter((code) => code.status === 'used').length;
+  const availableCodes = codes.filter(
+    (code) => code.status === 'available'
+  ).length;
+  const participation = codes.length
+    ? Math.min(Math.round((votes.length / codes.length) * 100), 100)
+    : 0;
+
+  const visibleCodes = codes.filter((code) => {
+    const matchesStatus = codeFilter === 'all' || code.status === codeFilter;
+    const matchesSearch = code.id.toLowerCase().includes(search.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
   return (
     <>
       <div className="pageHead">
         <div className="eyebrow">ADMIN • {YEAR}</div>
         <h1>Voting control room.</h1>
-        <p>
-          Monitor ballot submissions for Balon Dor Rank {YEAR}.
-        </p>
+        <p>Manage voter codes and monitor submitted ballots.</p>
         <p className="muted">Signed in as {user.email}</p>
         <button
           className="secondary"
-          onClick={refreshCounts}
+          onClick={refreshData}
           disabled={loading}
         >
-          {loading ? 'Refreshing…' : 'Refresh vote statistics'}
-        </button>
-        {' '}
+          {loading ? 'Refreshing…' : 'Refresh data'}
+        </button>{' '}
         <button className="secondary" onClick={() => signOut(auth)}>
           Sign out
         </button>
       </div>
 
       {error && <p className="message">{error}</p>}
+      {message && <p className="message">{message}</p>}
 
-      {stats && (
-        <>
-          <div className="adminGrid">
-            <div className="panel">
-              <span className="muted">Ballots submitted</span>
-              <h2>{stats.votes}</h2>
-            </div>
+      <div className="adminGrid">
+        <div className="panel">
+          <span className="muted">Ballots submitted</span>
+          <h2>{votes.length}</h2>
+        </div>
+        <div className="panel">
+          <span className="muted">Voter codes issued</span>
+          <h2>{codes.length}</h2>
+        </div>
+        <div className="panel">
+          <span className="muted">Codes still available</span>
+          <h2>{availableCodes}</h2>
+        </div>
+        <div className="panel">
+          <span className="muted">Codes marked used</span>
+          <h2>{usedCodes}</h2>
+        </div>
+      </div>
 
-            <div className="panel">
-              <span className="muted">Voter codes issued</span>
-              <h2>{stats.codes}</h2>
-            </div>
+      <section className="panel">
+        <h2>Participation progress</h2>
+        <h3>{participation}%</h3>
+        <div
+          role="progressbar"
+          aria-label="Voting participation"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={participation}
+          style={{
+            height: 12,
+            background: '#e5e7eb',
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{
+            height: '100%',
+            width: `${participation}%`,
+            background: '#c9a227',
+          }} />
+        </div>
+        <p className="muted">
+          {votes.length} ballots submitted out of {codes.length} issued codes.
+          Refresh to update these figures.
+        </p>
+      </section>
 
-            <div className="panel">
-              <span className="muted">Outstanding ballots</span>
-              <h2>{stats.remaining}</h2>
-            </div>
+      <section className="panel">
+        <h2>Voter Code Management</h2>
+        <p className="muted">
+          Voter codes are managed directly via the Firebase Console to keep the app on the free Spark plan.
+        </p>
+        <p>
+          To issue new codes, navigate to your <strong>Firestore Database</strong> in the Firebase Console, 
+          open the <code>voterCodes</code> collection, and add a new document where the <strong>Document ID</strong> is your custom code (e.g., <code>BDR26-A7K9-P2MX</code>) with fields:
+        </p>
+        <ul>
+          <li><code>year</code> (Number): <code>2026</code></li>
+          <li><code>status</code> (String): <code>available</code></li>
+        </ul>
+      </section>
+
+      <section className="panel">
+        <h2>Voter code register</h2>
+        <p className="muted">
+          The full register contains code IDs and status—not individual
+          ballot rankings.
+        </p>
+        <div className="adminGrid">
+          <div>
+            <label htmlFor="codeSearch">Search by code</label>
+            <input
+              id="codeSearch"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search voter code"
+            />
           </div>
-
-          <section className="panel">
-            <h3>Participation progress</h3>
-            <h2>{stats.percentage}%</h2>
-            <div
-              role="progressbar"
-              aria-label="Voting participation"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={stats.percentage}
-              style={{
-                height: 12,
-                background: '#e5e7eb',
-                borderRadius: 8,
-                overflow: 'hidden',
-              }}
+          <div>
+            <label htmlFor="codeFilter">Filter status</label>
+            <select
+              id="codeFilter"
+              value={codeFilter}
+              onChange={(event) => setCodeFilter(event.target.value)}
             >
-              <div
-                style={{
-                  height: '100%',
-                  width: `${stats.percentage}%`,
-                  background: '#c9a227',
-                  transition: 'width 0.3s ease',
-                }}
-              />
-            </div>
-            <p className="muted">
-              {stats.votes} of {stats.codes} issued voter codes
-              have submitted ballots.
-            </p>
-          </section>
-        </>
-      )}
+              <option value="all">All codes</option>
+              <option value="available">Available</option>
+              <option value="used">Used</option>
+            </select>
+          </div>
+        </div>
+        <button className="secondary" onClick={exportCodeRegister}>
+          Export full code register CSV
+        </button>
+        <p className="muted">
+          Showing {visibleCodes.length} of {codes.length} codes.
+        </p>
+        <div style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Voter code</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Used</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleCodes.map((code) => (
+                <tr key={code.id}>
+                  <td>{code.id}</td>
+                  <td>{code.status || 'Unknown'}</td>
+                  <td>{dateLabel(code.createdAt)}</td>
+                  <td>{dateLabel(code.usedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      {!stats && !loading && (
-        <section className="panel">
-          Statistics have not loaded yet. Use Refresh vote statistics.
-        </section>
-      )}
+      <section className="panel">
+        <h2>Submitted ballots</h2>
+        <p className="muted">
+          Rankings are private and visible only in this administrator view.
+          Keep exported ballot data secure.
+        </p>
+        <button className="secondary" onClick={exportBallots}>
+          Export ballot register CSV
+        </button>
+        <div style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Voter code</th>
+                <th>Submitted</th>
+                <th>Rankings</th>
+              </tr>
+            </thead>
+            <tbody>
+              {votes.map((vote) => (
+                <tr key={vote.id}>
+                  <td>{vote.voterCode || '—'}</td>
+                  <td>{dateLabel(vote.submittedAt)}</td>
+                  <td>
+                    <details>
+                      <summary>
+                        View {Array.isArray(vote.rankings)
+                          ? vote.rankings.length
+                          : 0} entries
+                      </summary>
+                      {Array.isArray(vote.rankings) ? (
+                        <ol>
+                          {vote.rankings.map((item, index) => (
+                            <li key={`${vote.id}-${index}`}>
+                              {playerRank(item, index)}. {playerLabel(item)}
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p>No ranking list found in this ballot.</p>
+                      )}
+                    </details>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {votes.length === 0 && (
+          <p className="muted">No ballots have been submitted yet.</p>
+        )}
+      </section>
     </>
   );
+}
+
+function dateValue(value) {
+  if (!value) return 0;
+
+  if (typeof value.toMillis === 'function') {
+    return value.toMillis();
+  }
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
