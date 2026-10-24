@@ -7,7 +7,7 @@ export const HISTORICAL = {
     ['Vinicius Jr',120],['Jude Bellingham',93],['Phil Foden',83],['Harry Kane',59],['Florian Wirtz',57],['Kylian Mbappe',51],['Rodri',50],['Toni Kroos',36],['Erling Haaland',27],['Rodrygo',16],['Cole Palmer',16],['Dovbyk',9],['Guirassy',8],['Lautaro Martinez',7],['Mats Hummels',6]
   ],
   2025: [
-    ['Ousmane Dembele',407],['Lamine Yamal',393],['Raphina',391],['Mohammed Salah',354],['Vitinha',313],['Pedri Gonzalez',280],['Kylian Mbappe',274],['Nuno Mendes',270],['Cole Palmer',263],['Harry Kane',260],['Robert Lewandowski',254],['Khvicha Kvaratskhelia',252],['Achraf Hakimi',233],['Desire Doue',213],['Joao Neves',195],['Viktor Gyokeres',190],['Gianluigi Donnaruma',171],['Lautaro Martinez',169],['Scott Mctominay',152],['Fabian Ruiz',142],['Florian Wirtz',129],['Vinicius Jr',127],['Jude Bellingham',113],['Michael Olise',112],['Denzel Dumfries',98],['Erling Haaland',96],['Virgil Van Djik',96],['Alexis Mac Allister',78],['Guirassy',70],['Declan Rice',38]
+    ['Ousmane Dembele',407],['Lamine Yamal',393],['Raphinha',391],['Mohammed Salah',354],['Vitinha',313],['Pedri Gonzalez',280],['Kylian Mbappe',274],['Nuno Mendes',270],['Cole Palmer',263],['Harry Kane',260],['Robert Lewandowski',254],['Khvicha Kvaratskhelia',252],['Achraf Hakimi',233],['Desire Doue',213],['Joao Neves',195],['Viktor Gyokeres',190],['Gianluigi Donnaruma',171],['Lautaro Martinez',169],['Scott Mctominay',152],['Fabian Ruiz',142],['Florian Wirtz',129],['Vinicius Jr',127],['Jude Bellingham',113],['Michael Olise',112],['Denzel Dumfries',98],['Erling Haaland',96],['Virgil Van Djik',96],['Alexis Mac Allister',78],['Guirassy',70],['Declan Rice',38]
   ]
 };
 
