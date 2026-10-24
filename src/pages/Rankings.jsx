@@ -32,6 +32,38 @@ function getPlayerDetails(item) {
   };
 }
 
+// Dynamic Wikipedia portrait fetcher for podium cards
+function PodiumPortrait({ name }) {
+  const [src, setSrc] = React.useState('');
+  const [failed, setFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    setSrc('');
+    setFailed(false);
+    if (!name) return;
+    const title = name.replaceAll(' ', '_');
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('No portrait')))
+      .then(data => {
+        if (active && data.thumbnail?.source) setSrc(data.thumbnail.source);
+        else if (active) setFailed(true);
+      })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [name]);
+
+  return (
+    <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0.5rem auto', border: '2px solid #c9a227', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {src && !failed ? (
+        <img src={src} alt={`${name} portrait`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <span style={{ fontSize: '0.70rem', color: '#666', textAlign: 'center', padding: '0 4px' }}>{name.split(' ').pop()}</span>
+      )}
+    </div>
+  );
+}
+
 export default function Rankings() {
   const [year, setYear] = React.useState(2026);
   const [published, setPublished] = React.useState(null);
@@ -118,7 +150,6 @@ export default function Rankings() {
             <div className="podium" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
               {rows.slice(0, 3).map((r, i) => {
                 const matchedPlayer = NOMINEES_2026?.find(p => p.name.toLowerCase() === r.name.toLowerCase() || p.id === r.playerId);
-                const playerImage = r.image || matchedPlayer?.image;
 
                 return (
                   <div
@@ -127,21 +158,16 @@ export default function Rankings() {
                     style={{ textAlign: 'center', padding: '1rem', background: '#fff', borderRadius: '8px', minWidth: '180px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
                   >
                     <span>#{i + 1}</span>
-                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0.5rem auto', border: '2px solid #c9a227', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {playerImage ? (
-                        <img
-                          src={playerImage}
-                          alt={r.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            console.error(`Failed to load image for ${r.name}:`, playerImage);
-                            e.target.style.display = 'none'; // Hide broken image so fallback shows
-                          }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>No Pic</span>
-                      )}
-                    </div>
+                    
+                    {/* Dynamic image rendering using stored image or Wikipedia fallback */}
+                    {r.image ? (
+                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0.5rem auto', border: '2px solid #c9a227', background: '#f0f0f0' }}>
+                        <img src={r.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    ) : (
+                      <PodiumPortrait name={r.name} />
+                    )}
+
                     <h2>{r.name}</h2>
                     <p className="muted" style={{ fontSize: '0.85rem', margin: '0.2rem 0' }}>{r.club || matchedPlayer?.club || ''}</p>
                     <b>{r.points}</b>
