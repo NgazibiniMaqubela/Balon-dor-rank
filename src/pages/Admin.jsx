@@ -156,7 +156,7 @@ export default function Admin() {
 
   const toggleVotingStatus = async () => {
     try {
-      const newStatus = !votingClosed; // if currently closed, we open it; if open, we close it
+      const newStatus = !votingClosed; 
       await setDoc(doc(db, 'settings', 'voting'), { isOpen: !newStatus }, { merge: true });
       setVotingClosed(newStatus);
       setMessage(newStatus ? 'Voting has been closed successfully.' : 'Voting has been reopened.');
@@ -164,7 +164,6 @@ export default function Admin() {
       setError(`Failed to update voting status: ${err.message}`);
     }
   };
-
   
   const publishRankings = async () => {
     if (!votingClosed) {
@@ -191,12 +190,11 @@ export default function Admin() {
           const name = playerLabel(item).trim();
           if (!name || name === 'Unknown player') return;
 
-          // Use the saved rank if present; otherwise use the item's position in the ballot.
           const rawRank = Number(playerRank(item, index));
           const rank = Number.isFinite(rawRank) && rawRank >= 1 && rawRank <= 30
             ? rawRank
             : index + 1;
-          const points = 31 - rank; // 1st = 30 points, 30th = 1 point.
+          const points = 31 - rank; 
           const club = item && typeof item === 'object' ? item.club || '' : '';
           const image = item && typeof item === 'object' ? item.image || '' : '';
 
@@ -237,8 +235,6 @@ export default function Admin() {
         firstPlaceVotes: player.firstPlaceVotes,
       }));
 
-      // This is the same path read by getPublishedResults() in votes.js.
-      // Firestore creates the results collection and 2026 document on this write.
       await setDoc(doc(db, 'results', String(YEAR)), {
         year: YEAR,
         published: true,
@@ -254,6 +250,40 @@ export default function Admin() {
       setPublishing(false);
     }
   };
+
+  // Helper to calculate live leaderboard array for admin review
+  const computeLiveLeaderboard = () => {
+    const scores = {};
+    votes.forEach((vote) => {
+      if (!Array.isArray(vote.rankings)) return;
+      vote.rankings.slice(0, 30).forEach((item, index) => {
+        const name = playerLabel(item).trim();
+        if (!name || name === 'Unknown player') return;
+        const rawRank = Number(playerRank(item, index));
+        const rank = Number.isFinite(rawRank) && rawRank >= 1 && rawRank <= 30 ? rawRank : index + 1;
+        const points = 31 - rank;
+        const club = item && typeof item === 'object' ? item.club || '' : '';
+
+        if (!scores[name]) {
+          scores[name] = { name, points: 0, votesCount: 0, firstPlaceVotes: 0, club };
+        }
+        scores[name].points += points;
+        scores[name].votesCount += 1;
+        if (rank === 1) scores[name].firstPlaceVotes += 1;
+        if (!scores[name].club && club) scores[name].club = club;
+      });
+    });
+
+    return Object.values(scores).sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.firstPlaceVotes - a.firstPlaceVotes ||
+        b.votesCount - a.votesCount ||
+        a.name.localeCompare(b.name)
+    ).map((p, index) => ({ ...p, overallRank: index + 1 }));
+  };
+
+  const liveLeaderboard = computeLiveLeaderboard();
 
   const exportCodeRegister = () => {
     downloadCsv([
@@ -279,6 +309,24 @@ export default function Admin() {
         JSON.stringify(vote.rankings ?? []),
       ]),
     ], `Balon-Dor-${YEAR}-Ballot-Register.csv`);
+  };
+
+  // Export 3-column analysis dataset: Each Voter Code appears 30 times with Player Name and Rank
+  const exportAnalysisDataset = () => {
+    const flattenedRows = [['Voter Code', 'Player Name', 'Rank', 'Points']];
+    votes.forEach((vote) => {
+      const code = vote.voterCode || 'UNKNOWN';
+      if (Array.isArray(vote.rankings)) {
+        vote.rankings.forEach((item, index) => {
+          const name = playerLabel(item).trim();
+          const rnk = Number(playerRank(item, index));
+          const pts = 31 - rnk;
+          flattenedRows.push([code, name, rnk, pts]);
+        });
+      }
+    });
+
+    downloadCsv(flattenedRows, `Balon-Dor-${YEAR}-Analysis-Flat-Dataset.csv`);
   };
 
   if (!firebaseConfigured) return <div className="panel">Firebase is not configured.</div>;
@@ -315,7 +363,6 @@ export default function Admin() {
 
   const usedCodes = codes.filter((code) => code.status === 'used').length;
   const availableCodes = codes.filter((code) => code.status === 'available').length;
-  const participation = codes.length ? Math.min(Math.round((votes.length / codes.length) * 100), 100) : 0;
   const visibleCodes = codes.filter((code) => {
     const matchesStatus = codeFilter === 'all' || code.status === codeFilter;
     const matchesSearch = code.id.toLowerCase().includes(search.toLowerCase());
@@ -373,10 +420,74 @@ export default function Admin() {
         <div className="panel"><span className="muted">Codes marked used</span><h2>{usedCodes}</h2></div>
       </div>
 
-      {/* Code Register & Ballot Sections remain intact */}
-      <section className="panel">
+      {/* Live Leaderboard Table Section */}
+      <section className="panel" style={{ marginTop: '2rem' }}>
+        <h2>Live Leaderboard Preview</h2>
+        <p className="muted">Current aggregate standing of players based on submitted votes before official publication.</p>
+        <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player Name</th>
+                <th>Club</th>
+                <th>Total Points</th>
+                <th>Votes Count</th>
+                <th>1st Place Votes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liveLeaderboard.length === 0 ? (
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>No votes submitted yet.</td></tr>
+              ) : (
+                liveLeaderboard.map((p) => (
+                  <tr key={p.name}>
+                    <td>#{p.overallRank}</td>
+                    <td><strong>{p.name}</strong></td>
+                    <td>{p.club || '—'}</td>
+                    <td>{p.points} pts</td>
+                    <td>{p.votesCount}</td>
+                    <td>{p.firstPlaceVotes}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Export & Data Section */}
+      <section className="panel" style={{ marginTop: '2rem' }}>
+        <h2>Analytics & Data Exports</h2>
+        <p className="muted">Download code registers or flat datasets for offline statistical analysis.</p>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+          <button className="secondary" onClick={exportCodeRegister}>Export Code Register CSV</button>
+          <button className="secondary" onClick={exportBallots}>Export Ballot Register CSV</button>
+          <button className="primary" onClick={exportAnalysisDataset}>Export Analysis Dataset (CSV)</button>
+        </div>
+      </section>
+
+      {/* Code Register Table */}
+      <section className="panel" style={{ marginTop: '2rem' }}>
         <h2>Voter code register</h2>
-        <button className="secondary" onClick={exportCodeRegister}>Export full code register CSV</button>
+        <div style={{ display: 'flex', gap: '1rem', margin: '1rem 0', flexWrap: 'wrap' }}>
+          <input 
+            type="text" 
+            placeholder="Search code..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff' }}
+          />
+          <select 
+            value={codeFilter} 
+            onChange={(e) => setCodeFilter(e.target.value)}
+            style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff' }}
+          >
+            <option value="all">All statuses</option>
+            <option value="available">Available</option>
+            <option value="used">Used</option>
+          </select>
+        </div>
         <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
           <table>
             <thead>
